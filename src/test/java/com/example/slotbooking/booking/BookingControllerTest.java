@@ -58,6 +58,7 @@ class BookingControllerTest {
         when(repository.findSlot(1L)).thenReturn(Optional.of(slot(1L, 5)));
         when(repository.insertBooking("order-1", "customer-1", 1L, BookingState.ACTIVE))
                 .thenReturn(new Booking(100L, "order-1", "customer-1", 1L, BookingState.ACTIVE));
+        when(customerClient.getCustomer("customer-1")).thenReturn(new Customer("customer-1", "jane@example.com"));
         stubArrivalWindow();
 
         BookingResponse response = controller.createBooking("customer-1", "order-1", 1L);

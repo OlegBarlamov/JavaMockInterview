@@ -14,7 +14,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
-import java.util.concurrent.CompletableFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -70,8 +69,7 @@ public class BookingController {
         repository.updateRemainingCapacity(slotId, slot.remainingCapacity() - 1);
         Booking booking = repository.insertBooking(orderId, customerId, slotId, BookingState.ACTIVE);
 
-        // notifications are slow, don't make the customer wait for them
-        CompletableFuture.runAsync(() -> sendConfirmation(customerId, booking, slot));
+        sendConfirmation(customerId, booking, slot);
 
         return BookingResponse.from(booking, slot, arrivalWindowFor(slot));
     }
