@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: slot-booking
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/slot_booking}
+    username: ${DB_USER:slot_booking}
+    password: ${DB_PASSWORD}
+  jooq:
+    sql-dialect: postgres
+  jackson:
+    property-naming-strategy: SNAKE_CASE
