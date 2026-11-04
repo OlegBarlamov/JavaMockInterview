@@ -10,6 +10,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.slotbooking.booking.BookingController.BookingRequest;
 import com.example.slotbooking.booking.BookingController.BookingResponse;
 import com.example.slotbooking.booking.BookingController.RescheduleRequest;
 import com.example.slotbooking.booking.SlotBookingRepository.Booking;
@@ -61,7 +62,7 @@ class BookingControllerTest {
         when(customerClient.getCustomer("customer-1")).thenReturn(new Customer("customer-1", "jane@example.com"));
         stubArrivalWindow();
 
-        BookingResponse response = controller.createBooking("customer-1", "order-1", 1L);
+        BookingResponse response = controller.book(new BookingRequest("order-1", 1L, "customer-1"));
 
         assertThat(response.bookingId()).isEqualTo(100L);
         assertThat(response.state()).isEqualTo(BookingState.ACTIVE);
@@ -75,7 +76,7 @@ class BookingControllerTest {
         when(repository.findActiveBookingByOrderId("order-1")).thenReturn(Optional.empty());
         when(repository.findSlot(1L)).thenReturn(Optional.of(slot(1L, 0)));
 
-        assertThatThrownBy(() -> controller.createBooking("customer-1", "order-1", 1L))
+        assertThatThrownBy(() -> controller.book(new BookingRequest("order-1", 1L, "customer-1")))
                 .isInstanceOf(RuntimeException.class);
         verify(repository, never()).updateRemainingCapacity(anyLong(), anyInt());
     }

@@ -17,7 +17,6 @@ import java.time.temporal.ChronoUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -44,11 +43,10 @@ public class BookingController {
 
     @PostMapping
     public BookingResponse book(@RequestBody BookingRequest request) {
-        return createBooking(request.customerId(), request.orderId(), request.slotId());
-    }
+        String customerId = request.customerId();
+        String orderId = request.orderId();
+        long slotId = request.slotId();
 
-    @Transactional
-    public BookingResponse createBooking(String customerId, String orderId, long slotId) {
         Order order = orderClient.findOrder(orderId)
                 .orElseThrow(() -> new RuntimeException("Order " + orderId + " not found"));
         if (!order.customerId().equals(customerId)) {
@@ -75,7 +73,6 @@ public class BookingController {
     }
 
     @PutMapping("/{id}")
-    @Transactional
     public BookingResponse reschedule(@PathVariable long id, @RequestBody RescheduleRequest request) {
         long newSlotId = request.newSlotId();
         log.info("Rescheduling booking {} to slot {}", id, newSlotId);
