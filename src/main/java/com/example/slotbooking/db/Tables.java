@@ -23,6 +23,13 @@ public final class Tables {
     public static final Field<Integer> SLOT_TOTAL_CAPACITY = field(name("slot", "total_capacity"), SQLDataType.INTEGER);
     public static final Field<Integer> SLOT_REMAINING_CAPACITY = field(name("slot", "remaining_capacity"), SQLDataType.INTEGER);
 
+    public static final Table<Record> BOOKING = table(name("booking"));
+    public static final Field<Long> BOOKING_ID = field(name("booking", "booking_id"), SQLDataType.BIGINT);
+    public static final Field<String> BOOKING_ORDER_ID = field(name("booking", "order_id"), SQLDataType.VARCHAR);
+    public static final Field<String> BOOKING_CUSTOMER_ID = field(name("booking", "customer_id"), SQLDataType.VARCHAR);
+    public static final Field<Long> BOOKING_SLOT_ID = field(name("booking", "slot_id"), SQLDataType.BIGINT);
+    public static final Field<String> BOOKING_STATE = field(name("booking", "state"), SQLDataType.VARCHAR);
+
     private Tables() {
     }
 }
