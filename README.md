@@ -19,16 +19,6 @@ Three REST endpoints:
 - **Booking:** `booking_id`, `order_id`, `customer_id`, `slot_id`, `state` (one of `ACTIVE`, `RESCHEDULED`, `CANCELLED`).
 - **Cutoff:** orders must be placed at least 2 hours before the slot's `start_at`.
 
-### Warehouses
-
-| Code   | Location  | Timezone                 |
-|--------|-----------|--------------------------|
-| NL-AMS | Amsterdam | `Europe/Amsterdam`, UTC+2 |
-| DE-Ber | Berlin    | `Europe/Berlin`, UTC+2    |
-| FR-PAR | Paris     | `Europe/Paris`, UTC+2     |
-
-A UK launch (London, `Europe/London`, UTC+1) is planned for late 2026. Each postcode maps to exactly one warehouse.
-
 ## Functional requirements
 
 ### List slots — `GET /slots?postcode={pc}&date={date}`
@@ -58,6 +48,18 @@ A UK launch (London, `Europe/London`, UTC+1) is planned for late 2026. Each post
 - JUnit 5 + AssertJ for tests, Mockito for mocking.
 - Stubbed clients exist and are injected: `OrderClient`, `CustomerClient`, `NotificationClient`, `RouteClient`. All synchronous.
 - The request principal includes `customer_id` (set by an upstream auth filter, see `CustomerAuthFilter`).
+
+## Assumptions
+
+Deliveries are made from regional fulfilment centres. For this case, assume the active warehouses are the ones in the table below.
+
+| Code   | Location  | Timezone                 |
+|--------|-----------|--------------------------|
+| NL-AMS | Amsterdam | `Europe/Amsterdam`, UTC+2 |
+| DE-Ber | Berlin    | `Europe/Berlin`, UTC+2    |
+| FR-PAR | Paris     | `Europe/Paris`, UTC+2     |
+
+A UK launch (London, `Europe/London`, UTC+1) is planned for late 2026. Each postcode maps to exactly one warehouse.
 
 ## Running locally
 
