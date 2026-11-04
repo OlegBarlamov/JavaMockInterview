@@ -10,7 +10,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.example.slotbooking.auth.CustomerPrincipal;
 import com.example.slotbooking.booking.BookingController.BookingResponse;
 import com.example.slotbooking.booking.BookingController.RescheduleRequest;
 import com.example.slotbooking.booking.SlotBookingRepository.Booking;
@@ -89,7 +88,7 @@ class BookingControllerTest {
         when(customerClient.getCustomer("customer-1")).thenReturn(new Customer("customer-1", "jane@example.com"));
         stubArrivalWindow();
 
-        controller.reschedule(100L, new RescheduleRequest(2L), new CustomerPrincipal("customer-1"));
+        controller.reschedule(100L, new RescheduleRequest(2L));
 
         Booking updated = repository.findBooking(100L).orElseThrow();
         assertThat(updated.state()).isEqualTo(BookingState.ACTIVE);

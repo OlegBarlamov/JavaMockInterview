@@ -1,6 +1,5 @@
 package com.example.slotbooking.booking;
 
-import com.example.slotbooking.auth.CustomerPrincipal;
 import com.example.slotbooking.booking.SlotBookingRepository.Booking;
 import com.example.slotbooking.booking.SlotBookingRepository.BookingState;
 import com.example.slotbooking.booking.SlotBookingRepository.Slot;
@@ -79,13 +78,9 @@ public class BookingController {
 
     @PutMapping("/{id}")
     @Transactional
-    public BookingResponse reschedule(
-            @PathVariable long id,
-            @RequestBody RescheduleRequest request,
-            CustomerPrincipal principal) {
-        String customerId = principal.customerId();
+    public BookingResponse reschedule(@PathVariable long id, @RequestBody RescheduleRequest request) {
         long newSlotId = request.newSlotId();
-        log.info("Customer {} is rescheduling booking {} to slot {}", customerId, id, newSlotId);
+        log.info("Rescheduling booking {} to slot {}", id, newSlotId);
 
         Booking booking = repository.findBooking(id)
                 .orElseThrow(() -> new RuntimeException("Booking " + id + " not found"));
@@ -104,10 +99,10 @@ public class BookingController {
         repository.updateRemainingCapacity(newSlot.slotId(), newSlot.remainingCapacity() - 1);
         repository.updateBookingSlot(id, newSlotId);
 
-        Customer customer = customerClient.getCustomer(customerId);
+        Customer customer = customerClient.getCustomer(booking.customerId());
         notificationClient.sendEmail(customer.email(), "Your delivery has been rescheduled",
                 "Your new delivery slot is " + newSlot.startAt() + " - " + newSlot.endAt());
-        notificationClient.sendPush(customerId, "Your delivery has been rescheduled");
+        notificationClient.sendPush(booking.customerId(), "Your delivery has been rescheduled");
 
         return BookingResponse.from(booking, newSlot, arrivalWindowFor(newSlot));
     }
