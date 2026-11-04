@@ -10,6 +10,12 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.slotbooking.auth.CustomerPrincipal;
+import com.example.slotbooking.booking.BookingController.BookingResponse;
+import com.example.slotbooking.booking.BookingController.RescheduleRequest;
+import com.example.slotbooking.booking.SlotBookingRepository.Booking;
+import com.example.slotbooking.booking.SlotBookingRepository.BookingState;
+import com.example.slotbooking.booking.SlotBookingRepository.Slot;
 import com.example.slotbooking.client.CustomerClient;
 import com.example.slotbooking.client.CustomerClient.Customer;
 import com.example.slotbooking.client.NotificationClient;
@@ -18,13 +24,8 @@ import com.example.slotbooking.client.OrderClient.Order;
 import com.example.slotbooking.client.OrderClient.OrderStatus;
 import com.example.slotbooking.client.RouteClient;
 import com.example.slotbooking.client.RouteClient.ArrivalWindow;
-import com.example.slotbooking.slot.Slot;
-import com.example.slotbooking.slot.SlotRepository;
-import com.example.slotbooking.warehouse.Warehouse;
-import com.example.slotbooking.warehouse.WarehouseResolver;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -34,12 +35,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class BookingServiceTest {
+class BookingControllerTest {
 
     @Mock
-    private BookingRepository bookingRepository;
-    @Mock
-    private SlotRepository slotRepository;
+    private SlotBookingRepository repository;
     @Mock
     private OrderClient orderClient;
     @Mock
@@ -48,62 +47,58 @@ class BookingServiceTest {
     private NotificationClient notificationClient;
     @Mock
     private RouteClient routeClient;
-    @Mock
-    private WarehouseResolver warehouseResolver;
 
     @InjectMocks
-    private BookingService bookingService;
+    private BookingController controller;
 
     @Test
     void createsBookingAndDecrementsCapacity() {
-        Slot slot = slot(1L, 5);
         when(orderClient.findOrder("order-1"))
                 .thenReturn(Optional.of(new Order("order-1", "customer-1", "1012 AB", OrderStatus.OPEN)));
-        when(bookingRepository.findActiveByOrderId("order-1")).thenReturn(Optional.empty());
-        when(slotRepository.findById(1L)).thenReturn(Optional.of(slot));
-        when(bookingRepository.insert("order-1", "customer-1", 1L, BookingState.ACTIVE))
+        when(repository.findActiveBookingByOrderId("order-1")).thenReturn(Optional.empty());
+        when(repository.findSlot(1L)).thenReturn(Optional.of(slot(1L, 5)));
+        when(repository.insertBooking("order-1", "customer-1", 1L, BookingState.ACTIVE))
                 .thenReturn(new Booking(100L, "order-1", "customer-1", 1L, BookingState.ACTIVE));
         stubArrivalWindow();
 
-        BookingResponse response = bookingService.createBooking("customer-1", "order-1", 1L);
+        BookingResponse response = controller.createBooking("customer-1", "order-1", 1L);
 
         assertThat(response.bookingId()).isEqualTo(100L);
         assertThat(response.state()).isEqualTo(BookingState.ACTIVE);
-        verify(slotRepository).updateRemainingCapacity(1L, 4);
+        verify(repository).updateRemainingCapacity(1L, 4);
     }
 
     @Test
     void rejectsFullSlot() {
         when(orderClient.findOrder("order-1"))
                 .thenReturn(Optional.of(new Order("order-1", "customer-1", "1012 AB", OrderStatus.OPEN)));
-        when(bookingRepository.findActiveByOrderId("order-1")).thenReturn(Optional.empty());
-        when(slotRepository.findById(1L)).thenReturn(Optional.of(slot(1L, 0)));
+        when(repository.findActiveBookingByOrderId("order-1")).thenReturn(Optional.empty());
+        when(repository.findSlot(1L)).thenReturn(Optional.of(slot(1L, 0)));
 
-        assertThatThrownBy(() -> bookingService.createBooking("customer-1", "order-1", 1L))
+        assertThatThrownBy(() -> controller.createBooking("customer-1", "order-1", 1L))
                 .isInstanceOf(RuntimeException.class);
-        verify(slotRepository, never()).updateRemainingCapacity(anyLong(), anyInt());
+        verify(repository, never()).updateRemainingCapacity(anyLong(), anyInt());
     }
 
     @Test
     void reschedulesBookingToNewSlot() {
         Booking booking = new Booking(100L, "order-1", "customer-1", 1L, BookingState.ACTIVE);
-        when(bookingRepository.findById(100L)).thenReturn(Optional.of(booking));
-        when(slotRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(slot(1L, 5)));
-        when(slotRepository.findByIdForUpdate(2L)).thenReturn(Optional.of(slot(2L, 3)));
+        when(repository.findBooking(100L)).thenReturn(Optional.of(booking));
+        when(repository.findSlotForUpdate(1L)).thenReturn(Optional.of(slot(1L, 5)));
+        when(repository.findSlotForUpdate(2L)).thenReturn(Optional.of(slot(2L, 3)));
         when(customerClient.getCustomer("customer-1")).thenReturn(new Customer("customer-1", "jane@example.com"));
         stubArrivalWindow();
 
-        bookingService.reschedule(100L, 2L, "customer-1");
+        controller.reschedule(100L, new RescheduleRequest(2L), new CustomerPrincipal("customer-1"));
 
-        Booking updated = bookingRepository.findById(100L).orElseThrow();
+        Booking updated = repository.findBooking(100L).orElseThrow();
         assertThat(updated.state()).isEqualTo(BookingState.ACTIVE);
-        verify(slotRepository).updateRemainingCapacity(1L, 6);
-        verify(slotRepository).updateRemainingCapacity(2L, 2);
-        verify(bookingRepository).updateSlot(100L, 2L);
+        verify(repository).updateRemainingCapacity(1L, 6);
+        verify(repository).updateRemainingCapacity(2L, 2);
+        verify(repository).updateBookingSlot(100L, 2L);
     }
 
     private void stubArrivalWindow() {
-        when(warehouseResolver.resolve(any())).thenReturn(new Warehouse("NL-AMS", ZoneOffset.ofHours(2)));
         when(routeClient.getEstimatedArrivalWindow(eq("NL-AMS"), any()))
                 .thenReturn(new ArrivalWindow(Duration.ofMinutes(20)));
     }
